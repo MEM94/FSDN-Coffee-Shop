@@ -11,7 +11,7 @@ app = Flask(__name__)
 setup_db(app)
 CORS(app)
 
-db_drop_and_create_all()
+# db_drop_and_create_all()
 
 ## ROUTES
 
@@ -28,7 +28,7 @@ def get_drinks():
 ## GET Drink Details Endpoint
 @app.route('/drinks-detail')
 @requires_auth('get:drinks-detail')
-def get_drinks_details():
+def get_drinks_details(drink):
     drinks = Drink.query.all()
         
     return jsonify({
@@ -36,27 +36,19 @@ def get_drinks_details():
         'drinks': [drink.long() for drink in drinks],
     })
 
-
-'''
-@TODO implement endpoint
-    POST /drinks
-        it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
-        or appropriate status code indicating reason for failure
-'''
 ## POST Drink Endpoint
 @app.route('/drinks', methods=['POST'])
 @requires_auth('post:drinks')
-def post_drink():
-
+def post_drink(drink):
     data = request.get_json()
-
+    
     try:
+        recipe = data.get('recipe')
+
         new_drink = Drink(
             title=data.get('title'),
-            recipe = data.get('recipe')
+            recipe=json.dumps(recipe)
         )
-
         new_drink.insert()
 
     except:
@@ -64,62 +56,35 @@ def post_drink():
         
     return jsonify({
         'success': True,
-        'drinks': '',
+        'drinks': [new_drink.long()],
     })
 
-    # if request.data:
-    #     body = request.get_json()
-    #     title = body.get('title', None)
-    #     recipe = body.get('recipe', None)
-    #     drink = Drink(title=title, recipe=json.dumps(recipe))
-    #     Drink.insert(drink)
-
-    #     new_drink = Drink.query.filter_by(id=drink.id).first()
-
-    #     return jsonify({
-    #         'success': True,
-    #         # 'drinks': [new_drink.long()]
-    #     })
-    # else:
-        # abort(422)
-
-
-'''
-@TODO implement endpoint
-    PATCH /drinks/<id>
-        where <id> is the existing model id
-        it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
-        or appropriate status code indicating reason for failure
-'''
 ## PATCH Drink Endpoint
 @app.route('/drinks/<int:id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
-def patch_drink(id):
-    drink = Drink.query.get(id)
+def patch_drink(drink, id):
 
-    if drink is None:
-        abort(404)
+    update_drink = Drink.query.get(id)
 
     data = request.get_json()
     if 'title' in data:
-        drink.title = data['title']
+        update_drink.title = data.get('title')
 
     if 'recipe' in data:
-        drink.recipe = json.dumps(data['recipe'])
+        recipe = data.get('recipe')
+        update_drink.recipe = json.dumps(recipe)
 
-    drink.update()
+    update_drink.update()
 
     return jsonify({
         'success': True,
-        'drinks': [drink.long()]
+        'drinks': [update_drink.long()]
     })
-
 
 ## Delete Drink Endpoint
 @app.route('/drinks/<int:id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
-def delete_drinks(id):
+def delete_drinks(drink, id):
 
     drink = Drink.query.get(id)
 
